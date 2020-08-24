@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css?family=Raleway');
+html {
+    height: 100%;
+    width: 100%;
+    font-family: 'Raleway', sans-serif;
+}
+
+body {
+    background-color: #e6e6e1;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+#background {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+
+#center {
+    text-align: center;
+    position: absolute;
+    width: 75%;
+    top: 25%;
+    left: 12.5%;
+}
+
+#under {
+    width: 60%;
+    height: 100%;
+    margin-left: 20%;
+    height: auto;
+}
+
+#center input[type="text"] {
+    width:60%;
+    margin-right: 10px;
+    height: 20px;
+    font-size: 1.3em;
+}
+
+#enter {
+    font-size: 2em;
+    position: absolute;
+    bottom: -2.5px;
+    -webkit-transition: color 0.2s ease-in;
+    -moz-transition: color 0.2s ease-in;
+    -o-transition: color 0.2s ease-in;
+    transition: color 0.2s ease-in;
+}
+
+#enter:hover {
+    color: #e2e2e2;
+    cursor: pointer;
+
+}
+
+#fridgeName {
+    position: absolute;
+    font-size: 1.2em;
+    color:#a8a8a8;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+#counter {
+    position: absolute;
+    top: 1.2vh;
+    right: 2vw;
+    height: 10vh;
+    font-size: 1.1em;
+}
+
+#create {
+    font-size: 64px;
+}
+
+#create:hover {
+    cursor: pointer;
+}
+
+.note {
+    width: 200px;
+    height: 200px;
+    background-color: #fff3e9;
+    border: 2px black solid;
+    position: absolute;
+    left: 8px;
+    min-width: 100px;
+    min-height: 100px;
+    overflow: hidden;
+    
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+  }
+
+.inside {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    font-size: 1em;
+}
+
+.edit, .delete, .resize, .text {
+    position: absolute;   
+   
+}
+
+.edit {
+    left: 0;
+    top: 0;
+    font-size: 22px!important;
+}
+
+.edit:hover, .delete:hover, .resize:hover, .cancel:hover, .save:hover {
+    color: #888888;
+}
+
+.edit:hover, .delete:hover, .cancel:hover, .save:hover {
+    cursor: pointer; 
+}
+
+.delete {
+    right: 0;
+    top: 0;
+}
+
+.resize:hover {
+    cursor: nwse-resize;
+}
+
+.resize {
+    bottom: 0;
+    right: 0;
+}
+.text {
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    left: 10%;
+    top: 25px;
+    text-align: center;
+}
+
+.text p {
+    display: inline-block;
+    text-align: center;
+    width: 100%;
+}
+
+.mce-notification-warning {
+    display: none;
+}
+
+.mce-tinymce {
+    z-index: 999!important;
+    margin-left: 10%!important;
+}
+
+.save, .cancel {
+    margin: 2px!important;
+    font-size: 2.6em!important;
+    position: relative!important;
+    z-index: 1000!important;
+    right: 0!important;
+    bottom: 0!important;
+}

@@ -1,0 +1,627 @@
+﻿<!DOCTYPE html>
+<html ng-app="fridgeApp">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Magnetyczna tablica</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <script src="https://cloud.tinymce.com/stable/tinymce.min.js?apiKey=hkhjea64kfnfbrbdvhdhumgmasgjs51rq2ts0pg61agqea9p"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular-route.js"></script>
+    <script>
+        angular.module("fridgeApp", ["ngRoute"])
+            .factory("color", () => {
+                let factory = {};
+
+                factory.change = (element, $scope) => {
+                    if ($scope.indexInfo.last) {
+                        angular.element($scope.indexInfo.last).css('background', "#ffefe0");
+                    }
+                    angular.element(element).css('background', "#ffcfa5");
+                }
+
+                return factory;
+            })
+
+            .factory("ajax", () => {
+                let factory = {};
+
+                factory.post = "POST";
+                factory.get = "GET";
+
+                factory.send = (data, type, scope) => {
+
+                    let mData = Object.keys(data).map((i) => {
+                        return encodeURIComponent(i) + '=' + encodeURIComponent(data[i])
+                    }).join('&');
+
+                    let xhttp = new XMLHttpRequest();
+
+                    if (type == factory.post) {
+                        xhttp.open("POST", "index.php?id=addaname", true);          //Add a name after =
+                        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                        xhttp.send(mData);
+                    }
+
+                    if (type == factory.get) {
+                        xhttp.onreadystatechange = function () {
+                            if (this.readyState == 4 && this.status == 200) {
+                                let response;
+                                if (xhttp.responseText) {
+                                    console.log(xhttp.responseText)
+                                    response = JSON.parse(xhttp.responseText);
+                                }
+
+                                if (response) {
+                                    factory.response = response;
+                                    scope.start(true);
+                                    return;
+                                } else {
+                                    scope.start(false);
+                                    return;
+                                }
+
+                            }
+                        };
+
+                        xhttp.open("GET", "index.php?id=addaname&name=" + data.name + "&init=" + data.init, true);      //add name
+                        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                        xhttp.send();
+                    }
+
+                }
+
+                return factory;
+            })
+
+            .factory("editCancel", () => {
+                let factory = {};
+
+                factory.cancel = (element) => {
+                    element
+                        .on('click', (e) => {
+
+                            angular.element(document.querySelector('#mceu_6')).css('display', 'none');
+
+                        })
+                }
+
+                return factory;
+            })
+
+            .factory("editSave", ['ajax', (ajax) => {
+                let factory = {};
+
+                factory.save = (element, $scope) => {
+                    element
+                        .on('click', (e) => {
+                            angular.element(document.querySelector('#mceu_6')).css('display', 'none');
+                            let content = tinymce.activeEditor.getContent()
+
+                            angular.element($scope.edit.active[0].parentElement.children[0]).html(content)
+                            $scope.edit.last = element;
+
+                            ajax.send({
+                                update: true,
+                                name: $scope.fridge,
+                                noteid: $scope.edit.active[0].parentElement.parentElement.dataset.noteid,
+                                content: content.toString(),
+                            }, ajax.post);
+                        })
+                }
+
+                return factory;
+            }])
+
+            .factory("noteDelete", ["noteIndex", "color", "ajax", (noteIndex, color, ajax) => {
+                let factory = {};
+
+                factory.active = false;
+
+                factory.delete = (element, $scope) => {
+                    element
+                        .on('click', () => {
+                            let rm = element[0].parentElement.parentElement;
+                            for (let i in $scope.indexInfo.array) {
+                                if ($scope.indexInfo.array[i][0] === rm) {
+                                    $scope.count.current--;
+
+                                    ajax.send({
+                                        delete: true,
+                                        name: $scope.fridge,
+                                        noteid: $scope.indexInfo.array[i][0].dataset.noteid,
+                                        amount: $scope.count.current,
+                                    }, ajax.post);
+
+                                    color.change(rm, $scope);
+                                    $scope.indexInfo.rmIndex = i;
+                                    noteIndex.updateIndex($scope);
+                                    $scope.indexInfo.array.splice(i, 1);
+                                    $scope.listArray();
+                                }
+                            }
+
+                            rm.remove();
+                            $scope.indexInfo.max--;
+                            $scope.indexInfo.last = null;
+
+                            $scope.updateCount();
+
+                        })
+
+                        .on('mousedown', (e) => {
+                            e.preventDefault();
+                            factory.active = true;
+                        })
+
+                    window.addEventListener('mouseup', (e) => {
+                        factory.active = false;
+                    })
+                }
+
+                return factory;
+            }])
+
+            .factory("noteEdit", ["$compile", ($compile) => {
+                let factory = {};
+
+                factory.active = false;
+                factory.created = false;
+
+                factory.openEditor = (element, $scope) => {
+
+                    element
+                        .on('click', (e) => {
+                            $scope.edit.active = element;
+                            let inside = angular.element(element[0].parentElement.children[0]).html();
+                            e.preventDefault();
+                            if (!factory.created) {
+                                let editor = $compile("<div class='editor'></div>")($scope);
+                                angular.element(document.body).append(editor);
+                                factory.created = true;
+                                tinymce.init({
+                                    selector: 'div.editor',
+                                    plugins: "textcolor colorpicker",
+                                    toolbar: "bold, italic, underline, strikethrough, fontselect, fontsizeselect",
+                                    max_width: "100%",
+                                    min_width: "30%",
+                                    width: "80%",
+                                    max_width: "100%",
+                                    resize: 'both',
+                                    theme: 'modern',
+                                    branding: false,
+                                    setup: function (editor) {
+                                        editor.on('init', function (e) {
+                                            let buttons = $compile("<div class='material-icons noselect cancel' cancel-edit>close</div> <div class='material-icons noselect save' save-edit>save</div>")($scope);
+                                            let bar = document.querySelector('#mceu_17-body');
+                                            angular.element(bar).append(buttons);
+                                            editor.execCommand('mceInsertContent', false, inside);
+                                            angular.element(document.body).append('<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>');
+                                            angular.element(document.querySelector('#mceu_6')).css('position', 'absolute');
+                                        });
+                                    }
+                                });
+                            } else {
+                                angular.element(document.querySelector('#mceu_6')).css('display', 'block');
+                                tinymce.activeEditor.setContent(inside) //get inside content
+
+                            }
+
+                        })
+
+                        .on('mousedown', (e) => {
+                            e.preventDefault();
+                            factory.active = true;
+                        })
+
+                    window.addEventListener('mouseup', () => {
+                        factory.active = false;
+                    })
+
+                }
+
+                return factory;
+            }])
+
+
+
+            .factory("noteIndex", ['ajax', (ajax) => {
+                let factory = {};
+
+                factory.changeIndex = (element, $scope) => {
+                    if ($scope.indexInfo.last != element[0]) {
+                        for (let i in $scope.indexInfo.array) {
+
+                            let el = $scope.indexInfo.array[i][0];
+
+                            if (el.style.zIndex != element[0].style.zIndex && Number(el.style.zIndex) > Number(element[0].style.zIndex)) {
+                                $scope.indexInfo.array[i][0].style.zIndex = Number($scope.indexInfo.array[i][0].style.zIndex) - 1;
+
+                                ajax.send({
+                                    update: true,
+                                    name: $scope.fridge,
+                                    noteid: $scope.indexInfo.array[i][0].dataset.noteid,
+                                    zindex: $scope.indexInfo.array[i][0].style.zIndex,
+                                }, ajax.post);
+
+                            }
+                        }
+
+                        element[0].style.zIndex = $scope.indexInfo.max;
+
+                        ajax.send({
+                            update: true,
+                            name: $scope.fridge,
+                            noteid: element[0].dataset.noteid,
+                            zindex: element[0].style.zIndex,
+                        }, ajax.post);
+
+                        $scope.indexInfo.last = element[0];
+
+                        $scope.listArray();
+                    }
+                }
+
+                factory.updateIndex = ($scope) => {
+                    for (let i in $scope.indexInfo.array) {
+                        let index = $scope.indexInfo.rmIndex;
+                        if (Number($scope.indexInfo.array[i][0].style.zIndex) > Number($scope.indexInfo.array[index][0].style.zIndex)) {
+
+                            $scope.indexInfo.array[i][0].style.zIndex = Number($scope.indexInfo.array[i][0].style.zIndex) - 1;
+
+                            ajax.send({
+                                update: true,
+                                name: $scope.fridge,
+                                noteid: $scope.indexInfo.array[i][0].dataset.noteid,
+                                zindex: $scope.indexInfo.array[i][0].style.zIndex,
+                            }, ajax.post);
+
+
+                        }
+                    }
+
+                }
+
+                return factory;
+            }])
+
+            .factory("noteResize", ["noteIndex", "color", "ajax", (noteIndex, color, ajax) => {
+                let factory = {};
+                factory.active = false;
+
+                factory.resize = (element, $scope) => {
+                    let initW, initH, movedW, movedH, allow = false, pElement;
+
+                    element
+                        .on('mousedown', (e) => {
+                            e.preventDefault();
+                            pElement = element[0].parentElement.parentElement;
+                            factory.active = true;
+                            color.change(pElement, $scope);
+                            noteIndex.changeIndex([pElement], $scope)
+
+                            initW = element[0].offsetHeight;
+                            initH = element[0].offsetWidth;
+                            
+
+                            window.addEventListener('mousemove', divResize, true);
+                        })
+
+                    window.addEventListener('mouseup', () => {
+                        if (allow) {
+                            if (movedH != initH || movedW != initW) {
+
+                                ajax.send({
+                                    update: true,
+                                    name: $scope.fridge,
+                                    noteid: pElement.dataset.noteid,
+                                    width: movedW,
+                                    height: movedH,
+                                }, ajax.post);
+                            }
+
+                            allow = false;
+                        }
+
+                        factory.active = false;
+                        window.removeEventListener('mousemove', divResize, true);
+                    })
+
+                    function divResize(e) {
+                        let pElement = element[0].parentElement.parentElement;
+                        movedW = initW + e.clientX - pElement.offsetLeft - 16;
+                        movedH = initH + e.clientY - pElement.offsetTop - 16;
+
+                        angular.element(pElement).css('height', movedH + "px");
+                        angular.element(pElement).css('width', movedW + "px");
+                        allow = true;
+                    }
+
+                }
+
+                return factory;
+            }])
+
+            .factory("noteDrag", ["noteIndex", "noteResize", "noteEdit", "noteDelete", "ajax", "color", function (noteIndex, noteResize, noteEdit, noteDelete, ajax, color) {
+                let factory = {};
+
+                factory.drag = function (element, $scope) {
+                    let initX, initY, offL, offT, left, top, oldLeft, oldTop, allow = false;
+
+                    element
+                        .on('mousedown', (e) => {
+                            if (!noteResize.active && !noteEdit.active && !noteDelete.active) {
+                                e.preventDefault();
+                                color.change(element, $scope);
+                                noteIndex.changeIndex(element, $scope);
+                                initX = e.pageX;
+                                initY = e.pageY;
+                                offL = element[0].offsetLeft;
+                                offT = element[0].offsetTop;
+
+                                oldLeft = offL + e.clientX - initX;
+                                oldTop = offT + e.clientY - initY;
+                                
+
+                                window.addEventListener('mousemove', divMove, true);
+                            }
+                        })
+
+                    window.addEventListener('mouseup', () => {
+                        if (allow) {
+                            if (left != oldLeft || top != oldTop) {
+
+                                ajax.send({
+                                    update: true,
+                                    name: $scope.fridge,
+                                    noteid: element[0].dataset.noteid,
+                                    x: left,
+                                    y: top,
+                                }, ajax.post);
+                            }
+
+                            allow = false;
+                        }
+
+                        window.removeEventListener('mousemove', divMove, true);
+                    })
+
+                    function divMove(e) {
+                        left = offL + e.clientX - initX;
+                        top = offT + e.clientY - initY;
+
+                        angular.element(element).css('left', left + "px");
+                        angular.element(element).css('top', top + "px");
+                        allow = true;
+                    }
+                }
+
+                return factory;
+            }])
+
+            /* <= Not needed probably => */
+            .directive('createNote', function () {
+                return {
+                    link: function (scope, element, attrs) {
+
+                    }
+                }
+            })
+
+            .directive('cancelEdit', ["editCancel", (editCancel) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        editCancel.cancel(element);
+                    }
+                }
+            }])
+
+            .directive('saveEdit', ["editSave", (editSave) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        editSave.save(element, scope);
+                    }
+                }
+            }])
+
+            .directive('deleteNote', ["noteDelete", (noteDelete) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        noteDelete.delete(element, scope);
+                    }
+                }
+            }])
+
+            .directive('editNote', ["noteEdit", (noteEdit) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        noteEdit.openEditor(element, scope);
+                    }
+                }
+            }])
+
+            .directive('resizeNote', ["noteResize", (noteResize) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        noteResize.resize(element, scope);
+                    }
+                }
+            }])
+
+            .directive('singleNote', ["noteDrag", (noteDrag) => {
+                return {
+                    link: function (scope, element, attrs) {
+                        noteDrag.drag(element, scope);
+                    }
+                }
+            }])
+
+            .directive('startFridge', ['$location', '$compile', 'noteIndex', 'ajax', ($location, $compile, noteIndex, ajax) => {
+                return {
+                    link: function ($scope, element, attrs) {
+
+                        $scope.indexInfo = {
+                            array: [],
+                            max: 0,
+                            last: null,
+                            rmIndex: null,
+                        }
+
+                        $scope.count = {
+                            session: 0,
+                            current: 0,
+                        }
+
+                        $scope.edit = {
+                            active: null,
+                        }
+
+                        /* <= Helper function => */
+                        $scope.listArray = () => {
+
+                            if ($scope.indexInfo.array.length != 0) {
+                                let str = "[";
+
+                                for (let i in $scope.indexInfo.array) {
+                                    str += $scope.indexInfo.array[i][0].style.zIndex
+                                    if (i != $scope.indexInfo.array.length - 1) {
+                                        str += ",";
+                                    } else {
+                                        str += "]";
+                                    }
+                                }
+                                console.log(str);
+                            }
+
+                        }
+
+                        element.on('click', () => {
+                            let input = document.querySelector('#input').value;
+
+                            if (input) {
+                                $scope.fridge = input;
+
+                                ajax.send({
+                                    init: true,
+                                    name: $scope.fridge,
+                                }, ajax.get, $scope);
+
+                                angular.element(document.querySelector('#background')).remove();
+
+                                $scope.start = function (exists) {
+                                    if (exists) {
+                                        $scope.count.current = ajax.response[0].amount;
+                                        $scope.count.session = ajax.response[0].session;
+                                        $scope.indexInfo.max = ajax.response[0].amount;
+
+                                        for (let i = 1; i < ajax.response.length; ++i) {
+
+                                            let note = $compile("<div class='note noselect' single-note data-noteid='" + ajax.response[i].noteid + "'></div>")($scope);
+                                            angular.element(document.body).append(note);
+
+                                            let inside = $compile("<div class='inside'><div class='text'>" + ajax.response[i].content + "</div></div>")($scope)
+                                            angular.element(note).append(inside);
+
+                                            let buttons = $compile("<div class='edit material-icons noselect' edit-note>edit</div> <div class='delete material-icons noselect' delete-note>close</div> <div class='resize material-icons noselect' resize-note>signal_cellular_null</div>")($scope);
+                                            angular.element(inside).append(buttons);
+
+                                            $scope.indexInfo.array.push(note)
+
+                                            console.log("zindex: " + ajax.response[i].zindex);
+                                            console.log("x: " + ajax.response[i].x, "y: " + ajax.response[i].y);
+
+                                            angular.element(note).css('zIndex', ajax.response[i].zindex);
+                                            angular.element(note).css('left', ajax.response[i].x + "px");
+                                            angular.element(note).css('top', ajax.response[i].y + "px");
+                                            angular.element(note).css('width', ajax.response[i].width + "px");
+                                            angular.element(note).css('height', ajax.response[i].height + "px");
+                                        }
+                                    }
+
+                                    let name = $compile("<div id='fridgeName' class='noselect'>Name: " + $scope.fridge + "</div>")($scope);
+
+                                    let counter = $compile("<div id='counter'><div class='noselect'> Current: " + $scope.count.current + " </div><div class='noselect'> Session: " + $scope.count.session + " </div></div>")($scope);
+
+
+                                    let generate = $compile("<div id='create' class='material-icons md-dark noselect' create-note ng-click='createNote()'>note_add</div>")($scope);
+
+                                    $scope.createNote = function () {
+                                        $scope.count.current++;
+                                        $scope.count.session++;
+
+                                        let note = $compile("<div class='note noselect' single-note data-noteid='" + $scope.count.session + "'></div>")($scope);
+                                        angular.element(document.body).append(note);
+
+                                        let inside = $compile("<div class='inside'><div class='text'><p> I am a glorious note! <br> <br> I only serve my master.</p></div></div>")($scope)
+                                        angular.element(note).append(inside);
+
+                                        let buttons = $compile("<div class='edit material-icons noselect' edit-note>edit</div> <div class='delete material-icons noselect' delete-note>close</div> <div class='resize material-icons noselect' resize-note>signal_cellular_null</div>")($scope);
+                                        angular.element(inside).append(buttons);
+
+                                        $scope.indexInfo.array.push(note);
+                                        $scope.indexInfo.max = $scope.indexInfo.array.length;
+                                        note[0].style.zIndex = $scope.indexInfo.array.length;
+
+                                        $scope.updateCount();
+                                        $scope.listArray();
+
+                                        ajax.send({
+                                            create: true,
+                                            name: input,
+                                            noteid: note[0].dataset.noteid,
+                                            zindex: note[0].style.zIndex,
+                                            content: inside[0].children[0].innerHTML,
+                                            x: note[0].offsetLeft,
+                                            y: note[0].offsetTop,
+                                            width: inside[0].offsetWidth,
+                                            height: inside[0].offsetHeight,
+                                            session: $scope.count.session,
+                                            amount: $scope.count.current,
+                                        }, ajax.post);
+                                    }
+
+                                    $scope.updateCount = () => {
+                                        angular.element(counter)[0].children[0].innerHTML = "Current: " + $scope.count.current;
+                                        angular.element(counter)[0].children[1].innerHTML = "Session: " + $scope.count.session;
+                                    }
+
+                                    angular.element(document.body).append(name);
+                                    angular.element(document.body).append(counter);
+                                    angular.element(document.body).append(generate);
+
+
+
+                                }
+
+                            } else {
+                                alert("Enter something");
+                            }
+
+                        })
+                    }
+                }
+            }])
+
+            .controller('fridgeController', ['$scope', '$compile', ($scope, $compile) => {
+                function init() {
+                    let start = $compile("<div id='background'><div id='center'><h1>Podaj nazwę swojej magnetycznej tablicy:</h1><br/><div id='under'><input id='input' type='text' name='fridge'><div id='enter' class='material-icons noselect' start-fridge>check_circle</div></div></div></div>")($scope);
+                    angular.element(document.body).append(start);
+                }
+
+                init();
+
+
+
+            }])
+
+    </script>
+</head>
+
+<body ng-controller="fridgeController">
+    <div ng-view>
+    </div>
+</body>
+
+</html>
